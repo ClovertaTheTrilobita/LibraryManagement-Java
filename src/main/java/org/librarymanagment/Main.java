@@ -1,4 +1,4 @@
-package org.example;
+package org.librarymanagment;
 
 public class Main {
     public static void main(String[] args) {
