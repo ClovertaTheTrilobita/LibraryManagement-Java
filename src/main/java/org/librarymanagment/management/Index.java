@@ -3,6 +3,7 @@ package org.librarymanagment.management;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.List;
 
 public class Index {
     private static final Color BG_COLOR = new Color(240, 240, 240);
@@ -37,17 +38,22 @@ public class Index {
     }
 
     private static void showUserAddMenu() {
-        JFrame frame = createBaseFrame("添加管理员", 300, 250);
+        JFrame frame = createBaseFrame("添加图书", 300, 300);
         JPanel panel = createFormPanel();
 
-        addFormField(panel, "用户名:", new JTextField());
-        addFormField(panel, "密码:", new JPasswordField());
+        addFormField(panel, "书名:", new JTextField());
+        addFormField(panel, "作者:", new JTextField());
+        addFormField(panel, "位置:", new JTextField());
 
         JPanel buttonPanel = createButtonPanel();
         addActionButton(buttonPanel, "添加", e -> {
-            // 添加管理员逻辑
-            JOptionPane.showMessageDialog(frame, "管理员添加成功！");
-            frame.dispose();
+            String bookName = ((JTextField)panel.getComponent(1)).getText();
+            String author = ((JTextField)panel.getComponent(3)).getText();
+            String location = ((JTextField)panel.getComponent(5)).getText();
+
+            if(BookManagement.addBook(bookName, author, location)) {
+                JOptionPane.showMessageDialog(frame, "添加成功");
+            }
         });
         addBackButton(buttonPanel, frame);
 
@@ -96,21 +102,36 @@ public class Index {
     }
 
     private static void showBookQueryMenu() {
-        JFrame frame = createBaseFrame("查询图书信息", 300, 250);
-        JPanel panel = createFormPanel();
+        JFrame frame = createBaseFrame("查询图书信息", 350, 300);
+        JPanel panel = new JPanel(new GridLayout(4, 1));
 
-        addFormField(panel, "图书ID:", new JTextField());
+        JComboBox<String> searchType = new JComboBox<>(new String[]{"按ID查询", "按书名查询", "按入库日期查询"});
+        JTextField keywordField = new JTextField();
 
-        JPanel buttonPanel = createButtonPanel();
-        addActionButton(buttonPanel, "查询", e -> {
-            // 查询图书逻辑
-            JOptionPane.showMessageDialog(frame, "查询结果：\n（此处应显示查询结果）");
-            frame.dispose();
+        panel.add(new JLabel("选择查询方式:"));
+        panel.add(searchType);
+        panel.add(new JLabel("输入关键词:"));
+        panel.add(keywordField);
+
+        JButton searchBtn = new JButton("查询");
+        searchBtn.addActionListener(e -> {
+            String type = switch(searchType.getSelectedIndex()) {
+                case 0 -> "id";
+                case 1 -> "name";
+                case 2 -> "time";
+                default -> "name";
+            };
+
+            List<String> results = BookManagement.searchBooks(type, keywordField.getText());
+            if (results != null && !results.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, String.join("\n\n", results.toArray(new String[0])));
+            } else {
+                JOptionPane.showMessageDialog(frame, "未找到相关记录");
+            }
         });
-        addBackButton(buttonPanel, frame);
 
         frame.add(panel, BorderLayout.CENTER);
-        frame.add(buttonPanel, BorderLayout.SOUTH);
+        frame.add(searchBtn, BorderLayout.SOUTH);
         centerFrame(frame);
     }
 
