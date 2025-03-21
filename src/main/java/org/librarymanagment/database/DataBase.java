@@ -4,12 +4,14 @@ package org.librarymanagment.database;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class DataBase {
     // 数据库连接配置
     private static final String URL = "jdbc:mysql://localhost:3306/library_managemtent?serverTimezone=UTC";
     private static final String USER = "root";
     private static final String PASSWORD = "123456";
+    private static final Set<String> ALLOWED_TABLES = Set.of("book", "user_list", "borrow_list");
 
     static {
         try {
@@ -71,6 +73,55 @@ public class DataBase {
     }
 
     /**
+     * @param keyword: 搜索内容
+    	 * @param pageNumber: 页数
+      * @return List<Book>
+     * @author cloverta
+     * @description 搜索书名，支持少字搜索，不支持模糊搜索。
+     * @date 2025/3/21 22:11
+     */
+    public List<Book> searchBooksByName(String keyword, int pageNumber) {
+        List<Book> books = new ArrayList<>();
+        // 参数校验
+        if(pageNumber < 1) {
+            throw new IllegalArgumentException("页码不能小于1");
+        }
+
+        // 计算偏移量（从0开始）
+        int offset = (pageNumber - 1) * 10;
+        String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time "
+                + "FROM book "
+                + "WHERE book_name LIKE ? "
+                + "LIMIT 10 OFFSET ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            // 设置分页参数
+            pstmt.setString(1, "%" + keyword + "%");
+            pstmt.setInt(2, offset);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Book book = new Book(
+                            rs.getInt("book_id"),
+                            rs.getString("book_name"),
+                            rs.getString("author"),
+                            rs.getString("location"),
+                            rs.getInt("is_borrowed"),
+                            rs.getTimestamp("storage_time")
+                    );
+                    books.add(book);
+                }
+            }
+        } catch (SQLException e) {
+            handleSQLException(e);
+        }
+        return books;
+    }
+
+
+    /**
      * @param formName: (String) 数据库中的表名
      * @return int
      * @author cloverta
@@ -78,7 +129,10 @@ public class DataBase {
      * @date 2025/3/21 19:41
      */
     public int getTotalPages(String formName) {
-        String sql = "SELECT COUNT(*) FROM" + formName;
+        if (!ALLOWED_TABLES.contains(formName)) {
+            throw new IllegalArgumentException("非法表名");
+        }
+        String sql = "SELECT COUNT(*) FROM " + formName;
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -106,13 +160,12 @@ public class DataBase {
         }
 
         int offset = (pageNumber - 1) * 10;
-        String sql = "SELECT user_id, user_name, password, email, phone, gender, is_admin"
+        String sql = "SELECT user_id, user_name, password, email, phone, gender, is_admin "
                 + "FROM user_list LIMIT 10 OFFSET ?";
 
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // 设置分页参数
             pstmt.setInt(1, offset);
 
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -135,9 +188,72 @@ public class DataBase {
         return users;
     }
 
-//    public boolean insertUser(User user) {
-//
-//    }
+    /**
+     * @param userId: 要删除的用户ID
+      * @return boolean
+     * @author cloverta
+     * @description 删除数据库中相应userID的用户
+     * @date 2025/3/21 21:22
+     */
+    public boolean deleteUser(int userId) {
+        String sql = "DELETE FROM user_list WHERE user_id=?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, userId);
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;  // 返回是否成功删除
+
+        } catch (SQLException e) {
+            handleSQLException(e);
+            return false;
+        }
+    }
+
+
+    /**
+     * @param keyword: 搜索关键字
+    	 * @param pageNumber: 页数
+      * @return List<User>
+     * @author cloverta
+     * @description 通过用户名关键字搜索用户
+     * @date 2025/3/21 22:28
+     */
+    public List<User> searchUsersByName(String keyword, int pageNumber) {
+        List<User> users = new ArrayList<>();
+        if(keyword == null) {
+            throw new IllegalArgumentException("用户名不能为空");
+        }
+
+        int offset = (pageNumber - 1) * 10;
+        String sql = "SELECT user_id, user_name, password, email, phone, gender, is_admin FROM user_list WHERE user_name LIKE ? LIMIT 10 OFFSET ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, "%" + keyword + "%");
+            pstmt.setInt(2, offset);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    User user = new User(
+                            rs.getInt("user_id"),
+                            rs.getString("user_name"),
+                            rs.getString("password"),
+                            rs.getString("email"),
+                            rs.getString("phone"),
+                            rs.getInt("gender"),
+                            rs.getInt("is_admin")
+                    );
+                    users.add(user);
+                }
+            }
+        } catch (SQLException e) {
+            handleSQLException(e);
+        }
+        return users;
+    }
 
     // 异常处理
     private void handleSQLException(SQLException e) {
