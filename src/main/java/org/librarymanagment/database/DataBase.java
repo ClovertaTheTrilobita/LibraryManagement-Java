@@ -2,7 +2,6 @@ package org.librarymanagment.database;
 
 
 import java.sql.*;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +30,7 @@ public class DataBase {
      * @param pageNumber: (int)第几页
       * @return List<Book>
      * @author cloverta
-     * @description 获取图书信息，传入值为第几页，返回值为一个由Book对象组成的List，一页十本书。
+     * @description 获取图书列表信息，传入值为第几页，返回值为一个由Book对象组成的List，一页十本书。
      * @date 2025/3/21 17:45
      */
     public List<Book> fetchBooks(int pageNumber) {
@@ -54,13 +53,14 @@ public class DataBase {
 
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    Book book = new Book();
-                    book.setId(rs.getInt("book_id"));
-                    book.setName(rs.getString("book_name"));
-                    book.setAuthor(rs.getString("author"));
-                    book.setLocation(rs.getString("location"));
-                    book.setIsBorrowed(rs.getInt("is_borrowed"));
-                    book.setStorageTime(rs.getTimestamp("storage_time"));
+                    Book book = new Book(
+                            rs.getInt("book_id"),
+                            rs.getString("book_name"),
+                            rs.getString("author"),
+                            rs.getString("location"),
+                            rs.getInt("is_borrowed"),
+                            rs.getTimestamp("storage_time")
+                    );
                     books.add(book);
                 }
             }
@@ -70,18 +70,15 @@ public class DataBase {
         return books;
     }
 
-    // 异常处理
-    private void handleSQLException(SQLException e) {
-        System.err.println("数据库操作异常：");
-        System.err.println("错误代码: " + e.getErrorCode());
-        System.err.println("SQL状态: " + e.getSQLState());
-        System.err.println("错误信息: " + e.getMessage());
-        e.printStackTrace();
-    }
-
-    // 建议添加获取总页数的方法
-    public int getTotalPages() {
-        String sql = "SELECT COUNT(*) FROM book";
+    /**
+     * @param formName: (String) 数据库中的表名
+     * @return int
+     * @author cloverta
+     * @description 获取该列表的总页数，例如获取图书列表总页数应为 getTotalPages("book")， 获取用户列表页数则使用 getTotalPages("user_list")
+     * @date 2025/3/21 19:41
+     */
+    public int getTotalPages(String formName) {
+        String sql = "SELECT COUNT(*) FROM" + formName;
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -93,6 +90,62 @@ public class DataBase {
             handleSQLException(e);
         }
         return 0;
+    }
+
+    /**
+     * @param pageNumber: (int)页数
+      * @return List<User>
+     * @author cloverta
+     * @description 获取全部用户信息，供管理员使用，一页十个。
+     * @date 2025/3/21 19:54
+     */
+    public List<User> fetchUsers(int pageNumber) {
+        List<User> users = new ArrayList<>();
+        if(pageNumber < 1) {
+            throw new IllegalArgumentException("页码不能小于1");
+        }
+
+        int offset = (pageNumber - 1) * 10;
+        String sql = "SELECT user_id, user_name, password, email, phone, gender, is_admin"
+                + "FROM user_list LIMIT 10 OFFSET ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            // 设置分页参数
+            pstmt.setInt(1, offset);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    User user = new User(
+                            rs.getInt("user_id"),
+                            rs.getString("user_name"),
+                            rs.getString("password"),
+                            rs.getString("email"),
+                            rs.getString("phone"),
+                            rs.getInt("gender"),
+                            rs.getInt("is_admin")
+                    );
+                    users.add(user);
+                }
+            }
+        } catch (SQLException e) {
+            handleSQLException(e);
+        }
+        return users;
+    }
+
+//    public boolean insertUser(User user) {
+//
+//    }
+
+    // 异常处理
+    private void handleSQLException(SQLException e) {
+        System.err.println("数据库操作异常：");
+        System.err.println("错误代码: " + e.getErrorCode());
+        System.err.println("SQL状态: " + e.getSQLState());
+        System.err.println("错误信息: " + e.getMessage());
+        e.printStackTrace();
     }
 
     // 使用示例

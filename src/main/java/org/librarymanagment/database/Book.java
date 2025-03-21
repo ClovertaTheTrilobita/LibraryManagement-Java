@@ -58,7 +58,13 @@ public class Book {
         this.location = location;
     }
 
-    public Book() {
+    public Book(int id, String name, String author, String location, int isBorrowed, Timestamp storageTime) {
+        this.id = id;
+        this.name = name;
+        this.author = author;
+        this.location = location;
 
+        this.isBorrowed = isBorrowed;
+        this.storageTime = storageTime;
     }
 }
