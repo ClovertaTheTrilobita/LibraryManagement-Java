@@ -1,12 +1,10 @@
 package org.librarymanagment.management;
 
-import com.mysql.fabric.xmlrpc.base.Data;
-import org.librarymanagment.database.DataBase;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JOptionPane;
+import org.librarymanagment.database.DataBase;
 
 public class UserManagement {
     // 添加管理员
@@ -23,21 +21,7 @@ public class UserManagement {
         }
     }
 
-    // 修改密码
-    public static boolean changePassword(int userId, String newPassword) {
-        String sql = "UPDATE user_list SET password = ? WHERE user_id = ?";
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, newPassword);
-            pstmt.setInt(2, userId);
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "修改失败: " + e.getMessage());
-            return false;
-        }
-    }
-
-    // 查询借阅记录
+    // 获取借阅记录
     public static List<String> getBorrowRecords(int userId, boolean unreturnedOnly) {
         List<String> records = new ArrayList<>();
         String sql = "SELECT b.book_name, bl.borrow_time, bl.return_time " +
@@ -53,10 +37,10 @@ public class UserManagement {
 
             while(rs.next()) {
                 String record = String.format(
-                        "书名: %s\n借阅时间: %s\n归还状态: %s",
+                        "📖 书名: %s\n⏰ 借阅时间: %s\n🔁 归还状态: %s",
                         rs.getString("book_name"),
                         rs.getTimestamp("borrow_time"),
-                        rs.getTimestamp("return_time") == null ? "未归还" : "已归还"
+                        rs.getTimestamp("return_time") == null ? "❌ 未归还" : "✅ 已归还"
                 );
                 records.add(record);
             }
@@ -66,7 +50,7 @@ public class UserManagement {
         return records;
     }
 
-    // 查询图书借阅情况
+    // 获取图书借阅情况
     public static String getBookBorrowStatus(String keyword) {
         String sql = "SELECT b.book_name, COUNT(bl.borrow_id) AS total_borrow, " +
                 "SUM(CASE WHEN bl.return_time IS NULL THEN 1 ELSE 0 END) AS unreturned " +
@@ -89,7 +73,7 @@ public class UserManagement {
             ResultSet rs = pstmt.executeQuery();
             if(rs.next()) {
                 return String.format(
-                        "书名: %s\n总借阅次数: %d\n未归还数量: %d",
+                        "📚 书名: %s\n🔢 总借阅次数: %d\n🚫 未归还数量: %d",
                         rs.getString("book_name"),
                         rs.getInt("total_borrow"),
                         rs.getInt("unreturned")
