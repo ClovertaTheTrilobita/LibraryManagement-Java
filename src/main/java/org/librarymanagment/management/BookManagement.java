@@ -30,7 +30,7 @@ public class BookManagement {
         String checkSql = "SELECT is_borrowed FROM book WHERE book_id = ?";
         String deleteSql = "DELETE FROM book WHERE book_id = ?";
 
-        try (Connection conn = DBUtil.getConnection();
+        try (Connection conn = DataBase.getConnection();
              PreparedStatement checkStmt = conn.prepareStatement(checkSql);
              PreparedStatement deleteStmt = conn.prepareStatement(deleteSql)) {
 
