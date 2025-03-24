@@ -9,6 +9,24 @@ public class Book {
     private String location;
     private int isBorrowed;
     private Timestamp storageTime;
+    private Timestamp borrowedTime;
+    private Timestamp returnTime;
+
+    public Timestamp getBorrowedTime() {
+        return borrowedTime;
+    }
+
+    public void setBorrowedTime(Timestamp borrowedTime) {
+        this.borrowedTime = borrowedTime;
+    }
+
+    public Timestamp getReturnTime() {
+        return returnTime;
+    }
+
+    public void setReturnTime(Timestamp returnTime) {
+        this.returnTime = returnTime;
+    }
 
     public int getIsBorrowed() {
         return isBorrowed;
@@ -58,13 +76,14 @@ public class Book {
         this.location = location;
     }
 
-    public Book(int id, String name, String author, String location, int isBorrowed, Timestamp storageTime) {
+    public Book(int id, String name, String author, String location, int isBorrowed, Timestamp storageTime, Timestamp borrowedTime, Timestamp returnTime) {
         this.id = id;
         this.name = name;
         this.author = author;
         this.location = location;
-
         this.isBorrowed = isBorrowed;
         this.storageTime = storageTime;
+        this.borrowedTime = borrowedTime;
+        this.returnTime = returnTime;
     }
 }
