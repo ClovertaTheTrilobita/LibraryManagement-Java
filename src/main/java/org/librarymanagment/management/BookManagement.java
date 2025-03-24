@@ -1,9 +1,10 @@
 package org.librarymanagment.management;
 
 import org.librarymanagment.database.DataBase;
+import org.librarymanagment.database.Book;
 
 import java.sql.*;
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JOptionPane;
@@ -11,44 +12,44 @@ import javax.swing.JOptionPane;
 public class BookManagement {
     // 添加图书
     public static boolean addBook(String bookName, String author, String location) {
-        String sql = "INSERT INTO book(book_name, author, location, is_borrowed, storage_time) VALUES(?, ?, ?, 0, NOW())";
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, bookName);
-            pstmt.setString(2, author);
-            pstmt.setString(3, location);
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "添加失败: " + e.getMessage());
-            return false;
+        // 创建 Book 对象并填充数据
+        Book book = new Book(
+                0,                  // book_id 由数据库自增
+                bookName,
+                author,
+                location,
+                0,// is_borrowed 默认未借出
+                new Timestamp(System.currentTimeMillis()),  // 当前时间戳
+                null, // borrowedTime（未被借出）
+                null  // returnTime（未被借出）
+        );
+
+        // 调用数据库操作类
+        DataBase db = new DataBase();
+        DataBase.BookDB bookDB = db.new BookDB();
+        boolean success = bookDB.addBook(book);
+
+        // 错误处理
+        if (!success) {
+            JOptionPane.showMessageDialog(null, "添加失败，请检查输入");
         }
+        return success;
     }
 
     // 删除图书（需检查借阅状态）
     public static boolean deleteBook(int bookId) {
         // 检查是否被借出
-        String checkSql = "SELECT is_borrowed FROM book WHERE book_id = ?";
-        String deleteSql = "DELETE FROM book WHERE book_id = ?";
+        DataBase db = new DataBase();
+        DataBase.BookDB bookDB = db.new BookDB();
+        boolean success = bookDB.deleteBook(bookId);
 
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement checkStmt = conn.prepareStatement(checkSql);
-             PreparedStatement deleteStmt = conn.prepareStatement(deleteSql)) {
-
-            checkStmt.setInt(1, bookId);
-            ResultSet rs = checkStmt.executeQuery();
-
-            if(rs.next() && rs.getInt("is_borrowed") == 1) {
-                JOptionPane.showMessageDialog(null, "图书已被借出，无法删除");
-                return false;
-            }
-
-            deleteStmt.setInt(1, bookId);
-            return deleteStmt.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "删除失败: " + e.getMessage());
-            return false;
+        // 错误处理
+        if (!success) {
+            JOptionPane.showMessageDialog(null, "删除失败，请检查图书ID是否存在");
+        } else {
+            JOptionPane.showMessageDialog(null, "删除成功");
         }
+        return success;
     }
 
     // 多条件查询图书
@@ -98,18 +99,33 @@ public class BookManagement {
     }
 
     // 更新图书信息
-    public static boolean updateBookInfo(int bookId, String field, String newValue) {
-        String sql = String.format("UPDATE book SET %s = ? WHERE book_id = ?", field);
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+    public static boolean updateBookInfo(int bookId, String name, String author,
+                                         String location, int isBorrowed,
+                                         Timestamp storageTime) {
+        // 创建 Book 对象（仅填充需要更新的字段）
+        Book book = new Book(
+                bookId,       // 虽然 SQL 中不更新 book_id，但需要传递以避免构造函数缺失字段
+                name,
+                author,
+                location,
+                isBorrowed,
+                storageTime,
+                null,         // borrowedTime（未在更新中使用，设为 null）
+                null          // returnTime（未在更新中使用，设为 null）
+        );
 
-            pstmt.setString(1, newValue);
-            pstmt.setInt(2, bookId);
+        // 调用数据库操作类
+        DataBase db = new DataBase();
+        DataBase.BookDB bookDB = db.new BookDB();
+        boolean success = bookDB.updateBook(bookId, book);
 
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "更新失败: " + e.getMessage());
-            return false;
+        // 错误处理
+        if (!success) {
+            JOptionPane.showMessageDialog(null, "更新失败，请检查书籍ID是否存在");
+        } else {
+            JOptionPane.showMessageDialog(null, "图书信息更新成功");
         }
+        return success;
     }
+}
 }

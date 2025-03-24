@@ -1,9 +1,13 @@
 package org.librarymanagment.management;
 
+import org.librarymanagment.database.DataBase;
+
+import org.librarymanagment.database.*;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.*;
 
 public class Index {
     private static final Color BG_COLOR = new Color(240, 240, 240);
@@ -38,40 +42,63 @@ public class Index {
     }
 
     private static void showUserAddMenu() {
-        JFrame frame = createBaseFrame("添加管理员", 300, 250);
-        JPanel panel = createFormPanel();
+        JFrame frame = new JFrame("添加管理员");
+        frame.setSize(400, 300);
+        JPanel panel = new JPanel(new GridLayout(6, 2));
 
-        // 添加输入字段
-        JTextField usernameField = new JTextField();
+        // 输入字段
+        JTextField userNameField = new JTextField();
         JPasswordField passwordField = new JPasswordField();
+        JTextField emailField = new JTextField();
+        JTextField phoneField = new JTextField();
+        JComboBox<String> genderCombo = new JComboBox<>(new String[]{"女", "男"});
+        JButton submitButton = new JButton("提交");
 
-        // 使用新方法添加带标签的输入框
-        addLabeledField(panel, "用户名:", usernameField);
-        addLabeledField(panel, "密码:", passwordField);
+        // 添加组件到面板
+        panel.add(new JLabel("用户名:"));
+        panel.add(userNameField);
+        panel.add(new JLabel("密码:"));
+        panel.add(passwordField);
+        panel.add(new JLabel("邮箱:"));
+        panel.add(emailField);
+        panel.add(new JLabel("电话:"));
+        panel.add(phoneField);
+        panel.add(new JLabel("性别:"));
+        panel.add(genderCombo);
+        panel.add(new JLabel()); // 占位
+        panel.add(submitButton);
 
-        JPanel buttonPanel = createButtonPanel();
-        addActionButton(buttonPanel, "添加", e -> {
-            // 正确获取输入内容
-            String username = usernameField.getText().trim();
+        // 提交按钮事件
+        submitButton.addActionListener(e -> {
+            String userName = userNameField.getText().trim();
             String password = new String(passwordField.getPassword()).trim();
+            String email = emailField.getText().trim();
+            String phone = phoneField.getText().trim();
+            int gender = genderCombo.getSelectedIndex(); // 0: 女, 1: 男
 
-            if(username.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(frame, "用户名和密码不能为空");
+            // 输入验证
+            if (userName.isEmpty() || password.isEmpty() || email.isEmpty() || phone.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "所有字段均不能为空");
+                return;
+            }
+            if (!email.matches("^[\\w-.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
+                JOptionPane.showMessageDialog(frame, "邮箱格式不正确");
+                return;
+            }
+            if (!phone.matches("\\d{11}")) {
+                JOptionPane.showMessageDialog(frame, "电话必须为11位数字");
                 return;
             }
 
-            if(UserManagement.addAdmin(username, password)) {
-                JOptionPane.showMessageDialog(frame, "管理员添加成功");
+            // 调用 UserManagement.addAdmin
+            boolean success = UserManagement.addAdmin(userName, password, email, phone, gender);
+            if (success) {
                 frame.dispose();
-            } else {
-                JOptionPane.showMessageDialog(frame, "添加失败，用户名可能已存在");
             }
         });
-        addBackButton(buttonPanel, frame);
 
-        frame.add(panel, BorderLayout.CENTER);
-        frame.add(buttonPanel, BorderLayout.SOUTH);
-        centerFrame(frame);
+        frame.add(panel);
+        frame.setVisible(true);
     }
 
     private static void showBookAddMenu() {
@@ -93,17 +120,16 @@ public class Index {
             String author = authorField.getText().trim();
             String location = locationField.getText().trim();
 
-            if(bookName.isEmpty() || author.isEmpty()) {
+            if (bookName.isEmpty() || author.isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "书名和作者不能为空");
                 return;
             }
 
-            if(BookManagement.addBook(bookName, author, location)) {
+            if (BookManagement.addBook(bookName, author, location)) {
                 JOptionPane.showMessageDialog(frame, "图书添加成功");
                 frame.dispose();
-            } else {
-                JOptionPane.showMessageDialog(frame, "添加失败，请检查输入");
             }
+            // 错误提示已由 BookManagement 处理
         });
         addBackButton(buttonPanel, frame);
 
@@ -122,23 +148,21 @@ public class Index {
 
         JPanel buttonPanel = createButtonPanel();
         addActionButton(buttonPanel, "删除", e -> {
-            String input = bookIdField.getText().trim();
+            String bookIdStr = bookIdField.getText().trim();
 
-            if(input.isEmpty()) {
-                JOptionPane.showMessageDialog(frame, "请输入图书ID");
+            if (bookIdStr.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "图书ID不能为空");
                 return;
             }
 
             try {
-                int bookId = Integer.parseInt(input);
-                if(BookManagement.deleteBook(bookId)) {
-                    JOptionPane.showMessageDialog(frame, "删除成功");
-                    frame.dispose();
-                } else {
-                    JOptionPane.showMessageDialog(frame, "删除失败，图书可能不存在或已被借出");
+                int bookId = Integer.parseInt(bookIdStr);
+                // 调用修改后的 BookManagement.deleteBook
+                if (BookManagement.deleteBook(bookId)) {
+                    frame.dispose(); // 关闭窗口
                 }
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(frame, "请输入有效的数字ID");
+                JOptionPane.showMessageDialog(frame, "图书ID必须为数字");
             }
         });
         addBackButton(buttonPanel, frame);
@@ -149,44 +173,69 @@ public class Index {
     }
 
     private static void showBookUpdateMenu() {
-        JFrame frame = createBaseFrame("修改图书信息", 400, 400);
-        JPanel panel = createFormPanel();
+        JFrame frame = new JFrame("更新图书信息");
+        frame.setSize(400, 400);
+        JPanel panel = new JPanel(new GridLayout(7, 2));
 
-        // 输入组件直接引用
+        // 输入字段
         JTextField bookIdField = new JTextField();
-        JComboBox<String> fieldCombo = new JComboBox<>(new String[]{"书名", "作者", "位置"});
-        JTextField newValueField = new JTextField();
+        JTextField nameField = new JTextField();
+        JTextField authorField = new JTextField();
+        JTextField locationField = new JTextField();
+        JComboBox<String> isBorrowedCombo = new JComboBox<>(new String[]{"未借出", "已借出"});
+        JTextField storageTimeField = new JTextField(); // 格式：yyyy-MM-dd HH:mm:ss
+        JButton submitButton = new JButton("提交");
 
-        addLabeledField(panel, "图书ID:", bookIdField);
-        addLabeledField(panel, "选择修改项:", fieldCombo);
-        addLabeledField(panel, "新内容:", newValueField);
+        // 添加组件到面板
+        panel.add(new JLabel("书籍ID:"));
+        panel.add(bookIdField);
+        panel.add(new JLabel("书名:"));
+        panel.add(nameField);
+        panel.add(new JLabel("作者:"));
+        panel.add(authorField);
+        panel.add(new JLabel("位置:"));
+        panel.add(locationField);
+        panel.add(new JLabel("借阅状态:"));
+        panel.add(isBorrowedCombo);
+        panel.add(new JLabel("入库时间 (格式: yyyy-MM-dd HH:mm:ss):"));
+        panel.add(storageTimeField);
+        panel.add(new JLabel()); // 占位
+        panel.add(submitButton);
 
-        JPanel buttonPanel = createButtonPanel();
-        addActionButton(buttonPanel, "修改", e -> {
+        // 提交按钮事件
+        submitButton.addActionListener(e -> {
             try {
                 int bookId = Integer.parseInt(bookIdField.getText().trim());
-                String field = switch(fieldCombo.getSelectedIndex()) {
-                    case 0 -> "book_name";
-                    case 1 -> "author";
-                    case 2 -> "location";
-                    default -> "";
-                };
-                String newValue = newValueField.getText().trim();
+                String name = nameField.getText().trim();
+                String author = authorField.getText().trim();
+                String location = locationField.getText().trim();
+                int isBorrowed = isBorrowedCombo.getSelectedIndex(); // 0: 未借出, 1: 已借出
+                Timestamp storageTime = Timestamp.valueOf(storageTimeField.getText().trim());
 
-                if(BookManagement.updateBookInfo(bookId, field, newValue)) {
-                    JOptionPane.showMessageDialog(frame, "修改成功");
+                // 输入验证（示例，可根据需求扩展）
+                if (name.isEmpty() || author.isEmpty() || location.isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "书名、作者、位置不能为空");
+                    return;
+                }
+
+                // 调用 BookManagement.updateBookInfo
+                boolean success = BookManagement.updateBookInfo(
+                        bookId, name, author, location, isBorrowed, storageTime
+                );
+                if (success) {
                     frame.dispose();
                 }
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(frame, "请输入有效的图书ID");
+                JOptionPane.showMessageDialog(frame, "书籍ID必须为数字");
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(frame, "入库时间格式错误，正确格式：yyyy-MM-dd HH:mm:ss");
             }
         });
-        addBackButton(buttonPanel, frame);
 
-        frame.add(panel, BorderLayout.CENTER);
-        frame.add(buttonPanel, BorderLayout.SOUTH);
-        centerFrame(frame);
+        frame.add(panel);
+        frame.setVisible(true);
     }
+
     private static void showBookQueryMenu() {
         JFrame frame = createBaseFrame("图书查询", 350, 300);
         JPanel panel = new JPanel(new GridLayout(4, 1));

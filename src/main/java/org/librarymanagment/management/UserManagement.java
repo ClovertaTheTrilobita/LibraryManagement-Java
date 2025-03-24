@@ -5,21 +5,37 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JOptionPane;
 import org.librarymanagment.database.DataBase;
+import org.librarymanagment.database.User;
 
 public class UserManagement {
     // 添加管理员
-    public static boolean addAdmin(String username, String password) {
-        String sql = "INSERT INTO user_list(user_name, password, is_admin) VALUES(?, ?, 1)";
-        try (Connection conn = DataBase.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, username);
-            pstmt.setString(2, password);
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "添加失败: " + e.getMessage());
-            return false;
+    public static boolean addAdmin(String userName, String password, String email,
+                                   String phone, int gender) {
+        // 创建 User 对象，isAdmin 固定为 1
+        User user = new User(
+                0,          // userId 由数据库自增
+                userName,
+                password,
+                email,
+                phone,
+                gender,
+                1           // is_admin=1 表示管理员
+        );
+
+        // 调用数据库操作类
+        DataBase db = new DataBase();
+        DataBase.UserListDB userDB = db.new UserListDB();
+        boolean success = userDB.addUser(user);
+
+        // 错误处理
+        if (!success) {
+            JOptionPane.showMessageDialog(null, "添加管理员失败，用户名或邮箱可能重复");
+        } else {
+            JOptionPane.showMessageDialog(null, "管理员添加成功");
         }
+        return success;
     }
+
 
     // 获取借阅记录
     public static List<String> getBorrowRecords(int userId, boolean unreturnedOnly) {
