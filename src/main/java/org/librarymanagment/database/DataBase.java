@@ -13,7 +13,7 @@ import java.util.Set;
 
 public class DataBase {
     // 数据库连接配置
-    private static final String URL = "jdbc:mysql://localhost:3306/library_managemtent?serverTimezone=UTC";
+    private static final String URL = "jdbc:mysql://localhost:3306/library_management?serverTimezone=UTC";
     private static final String USER = "root";
     private static final String PASSWORD = "123456";
     private static final Set<String> ALLOWED_TABLES = Set.of("book", "user_list", "borrow_list");
@@ -58,7 +58,7 @@ public class DataBase {
 
             // 计算偏移量（从0开始）
             int offset = (pageNumber - 1) * 10;
-            String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time "
+            String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time, borrow_time, return_time "
                     + "FROM book LIMIT 10 OFFSET ?";
 
             try (Connection conn = getConnection();
@@ -75,7 +75,46 @@ public class DataBase {
                                 rs.getString("author"),
                                 rs.getString("location"),
                                 rs.getInt("is_borrowed"),
-                                rs.getTimestamp("storage_time")
+                                rs.getTimestamp("storage_time"),
+                                rs.getTimestamp("borrow_time"),
+                                rs.getTimestamp("return_time")
+                        );
+                        books.add(book);
+                    }
+                }
+            } catch (SQLException e) {
+                handleSQLException(e);
+            }
+            return books;
+        }
+
+
+        public List<Book> fetchBorrowedBooks(int pageNumber) {
+            List<Book> books = new ArrayList<>();
+            if(pageNumber < 1) {
+                throw new IllegalArgumentException("页码不能小于1");
+            }
+
+            int offset = (pageNumber - 1) * 10;
+            String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time, borrow_time, return_time FROM book WHERE is_borrowed = 1 LIMIT 10 OFFSET ?";
+
+            try (Connection conn = getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+                // 设置分页参数
+                pstmt.setInt(1, offset);
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        Book book = new Book(
+                                rs.getInt("book_id"),
+                                rs.getString("book_name"),
+                                rs.getString("author"),
+                                rs.getString("location"),
+                                rs.getInt("is_borrowed"),
+                                rs.getTimestamp("storage_time"),
+                                rs.getTimestamp("borrow_time"),
+                                rs.getTimestamp("return_time")
                         );
                         books.add(book);
                     }
@@ -104,7 +143,7 @@ public class DataBase {
 
             // 计算偏移量（从0开始）
             int offset = (pageNumber - 1) * 10;
-            String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time "
+            String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time, borrow_time, return_time "
                     + "FROM book "
                     + "WHERE book_name LIKE ? "
                     + "LIMIT 10 OFFSET ?";
@@ -129,7 +168,7 @@ public class DataBase {
 
             // 计算偏移量（从0开始）
             int offset = (pageNumber - 1) * 10;
-            String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time "
+            String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time, borrow_time, return_time "
                     + "FROM book "
                     + "WHERE author LIKE ? "
                     + "LIMIT 10 OFFSET ?";
@@ -154,7 +193,7 @@ public class DataBase {
 
             // 计算偏移量（从0开始）
             int offset = (pageNumber - 1) * 10;
-            String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time "
+            String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time, borrow_time, return_time "
                     + "FROM book "
                     + "WHERE location LIKE ? "
                     + "LIMIT 10 OFFSET ?";
@@ -171,7 +210,7 @@ public class DataBase {
          * @date 2025/3/23 21:30
          */
         public boolean addBook(Book book) {
-            String sql = "INSERT INTO book (book_name, author, location, is_borrowed, storage_time) VALUES (?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO book (book_name, author, location, is_borrowed, storage_time, borrow_time, return_time) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
             try (Connection conn = getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -181,6 +220,8 @@ public class DataBase {
                 pstmt.setString(3, book.getLocation());
                 pstmt.setInt(4, book.getIsBorrowed());
                 pstmt.setTimestamp(5, book.getStorageTime());
+                pstmt.setTimestamp(6, book.getBorrowedTime());
+                pstmt.setTimestamp(7, book.getReturnTime());
 
                 int affectedRows = pstmt.executeUpdate();
                 return affectedRows > 0;  // 返回是否成功删除
@@ -224,7 +265,7 @@ public class DataBase {
          * @description 根据bookId修改图书信息，不允许修改bookId
          * @date 2025/3/23 21:44
          */
-        private boolean updateBook(int bookId, Book book) {
+        public boolean updateBook(int bookId, Book book) {
             String sql = "UPDATE book SET book_name = ?, author = ?, location = ?, is_borrowed = ?, storage_time = ? WHERE book_id = ?";
 
             try (Connection conn = getConnection();
@@ -273,7 +314,9 @@ public class DataBase {
                                 rs.getString("author"),
                                 rs.getString("location"),
                                 rs.getInt("is_borrowed"),
-                                rs.getTimestamp("storage_time")
+                                rs.getTimestamp("storage_time"),
+                                rs.getTimestamp("borrow_time"),
+                                rs.getTimestamp("return_time")
                         );
                         books.add(book);
                     }
@@ -463,6 +506,48 @@ public class DataBase {
             }
         }
     }
+
+
+
+//    public class BorrowHistoryDB {
+//        public List<Book> fetchBorrowedBooks(int pageNumber) {
+//            List<Book> books = new ArrayList<>();
+//            if(pageNumber < 1) {
+//                throw new IllegalArgumentException("页码不能小于1");
+//            }
+//
+//            int offset = (pageNumber - 1) * 10;
+//            String sql = "SELECT borrow_id, book_id, borrow_time, return_time FROM borrow_list LIMIT 10 OFFSET ?";
+//            String sql1 = "SELECT book_id, book_name, author, location, is_borrowed, storage_time, borrow_time, return_time FROM book WHERE book_id = " +
+//                    "(SELECT book_id FROM borrow_list) LIMIT 10 OFFSET ?";
+//
+//            try (Connection conn = getConnection();
+//                 PreparedStatement pstmt = conn.prepareStatement(sql);
+//                 PreparedStatement pstmt1 = conn.prepareStatement(sql1)) {
+//
+//                pstmt.setInt(1, offset);
+//                pstmt1.setInt(1, offset);
+//
+//                try (ResultSet rs = pstmt.executeQuery();
+//                ResultSet rs1 = pstmt1.executeQuery();) {
+//                    while (rs.next()) {
+//                        Book book = new Book(
+//                                rs.getInt("book_id"),
+//                                rs.getString("book_name"),
+//                                rs.getString("author"),
+//                                rs.getString("location"),
+//                                rs.getInt("is_borrowed"),
+//                                rs.getTimestamp("storage_time")
+//                        );
+//                        books.add(book);
+//                    }
+//                }
+//            } catch (SQLException e) {
+//                handleSQLException(e);
+//            }
+//            return books;
+//        }
+//    }
 
     /**
      * @param formName: (String) 数据库中的表名
