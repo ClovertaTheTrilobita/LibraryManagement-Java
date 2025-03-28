@@ -34,7 +34,7 @@ public class Index {
         addMenuButton(mainPanel, "添加新图书", e -> showBookAddMenu());
         addMenuButton(mainPanel, "删除指定图书", e -> showBookDeleteMenu());
         addMenuButton(mainPanel, "查询图书信息", e -> showBookQueryMenu());
-        addMenuButton(mainPanel, "查询借还书记录", e -> showBorrowManageMenu());
+//        addMenuButton(mainPanel, "查询借还书记录", e -> showBorrowManageMenu());
         addMenuButton(mainPanel, "退出", e -> frame.dispose());
 
         frame.add(mainPanel);
@@ -415,62 +415,62 @@ public class Index {
         return sb.toString().trim();
     }
 
-    private static void showBorrowManageMenu() {
-        JFrame frame = createBaseFrame("借阅记录管理", 400, 300);
-        JPanel panel = createFormPanel();
-
-        // 直接引用组件
-        JComboBox<String> searchType = new JComboBox<>(new String[]{
-                "按用户ID查询所有记录",
-                "按用户ID查询未归还记录",
-                "按图书ID/名称查询"
-        });
-        JTextField inputField = new JTextField();
-
-        addLabeledField(panel, "查询类型:", searchType);
-        addLabeledField(panel, "输入内容:", inputField);
-
-        JPanel buttonPanel = createButtonPanel();
-        addActionButton(buttonPanel, "查询", e -> {
-            try {
-                int type = searchType.getSelectedIndex();
-                String keyword = inputField.getText().trim();
-
-                if(keyword.isEmpty()) {
-                    JOptionPane.showMessageDialog(frame, "请输入查询内容");
-                    return;
-                }
-
-                // 查询逻辑
-                List<String> results = new ArrayList<>();
-                switch(type) {
-                    case 0:
-                    case 1:
-                        int userId = Integer.parseInt(keyword);
-                        results = UserManagement.getBorrowRecords(userId, type == 1);
-                        break;
-                    case 2:
-                        String status = UserManagement.getBookBorrowStatus(keyword);
-                        results.add(status);
-                        break;
-                }
-
-                if(!results.isEmpty()) {
-                    new ResultDialog(frame, "查询结果", results);
-                } else {
-                    JOptionPane.showMessageDialog(frame, "未找到相关记录");
-                }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(frame, "用户ID必须是数字");
-            }
-        });
-        addBackButton(buttonPanel, frame);
-
-        frame.add(panel, BorderLayout.CENTER);
-        frame.add(buttonPanel, BorderLayout.SOUTH);
-        centerFrame(frame);
-    }
-
+//    private static void showBorrowManageMenu() {
+//        JFrame frame = createBaseFrame("借阅记录管理", 400, 300);
+//        JPanel panel = createFormPanel();
+//
+//        // 直接引用组件
+//        JComboBox<String> searchType = new JComboBox<>(new String[]{
+//                "按用户ID查询所有记录",
+//                "按用户ID查询未归还记录",
+//                "按图书ID/名称查询"
+//        });
+//        JTextField inputField = new JTextField();
+//
+//        addLabeledField(panel, "查询类型:", searchType);
+//        addLabeledField(panel, "输入内容:", inputField);
+//
+//        JPanel buttonPanel = createButtonPanel();
+//        addActionButton(buttonPanel, "查询", e -> {
+//            try {
+//                int type = searchType.getSelectedIndex();
+//                String keyword = inputField.getText().trim();
+//
+//                if(keyword.isEmpty()) {
+//                    JOptionPane.showMessageDialog(frame, "请输入查询内容");
+//                    return;
+//                }
+//
+//                // 查询逻辑
+//                List<String> results = new ArrayList<>();
+//                switch(type) {
+//                    case 0:
+//                    case 1:
+//                        int userId = Integer.parseInt(keyword);
+//                        results = UserManagement.getBorrowRecords(userId, type == 1);
+//                        break;
+//                    case 2:
+//                        String status = UserManagement.getBookBorrowStatus(keyword);
+//                        results.add(status);
+//                        break;
+//                }
+//
+//                if(!results.isEmpty()) {
+//                    new ResultDialog(frame, "查询结果", results);
+//                } else {
+//                    JOptionPane.showMessageDialog(frame, "未找到相关记录");
+//                }
+//            } catch (NumberFormatException ex) {
+//                JOptionPane.showMessageDialog(frame, "用户ID必须是数字");
+//            }
+//        });
+//        addBackButton(buttonPanel, frame);
+//
+//        frame.add(panel, BorderLayout.CENTER);
+//        frame.add(buttonPanel, BorderLayout.SOUTH);
+//        centerFrame(frame);
+//    }
+//
 
 
     private static JFrame createBaseFrame(String title, int width, int height) {
