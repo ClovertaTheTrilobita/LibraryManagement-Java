@@ -122,6 +122,56 @@ public class DataBase {
 
 
         /**
+         * @param bookId: (int)书籍id
+        	 * @param pageNumber: (int)页码
+          * @return List<Book>
+         * @author cloverta
+         * @description 通过BookID获取图书
+         * @date 2025/3/28 16:41
+         */
+        public List<Book> searchBooksById(int bookId, int pageNumber) {
+            List<Book> books = new ArrayList<>();
+            if(bookId < 1) {
+                throw new IllegalArgumentException("页码不能小于1");
+            }
+
+            // 计算偏移量（从0开始）
+            int offset = (pageNumber - 1) * 10;
+            String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time, borrow_time, return_time "
+                    + "FROM book "
+                    + "WHERE book_id LIKE ? "
+                    + "LIMIT 10 OFFSET ?";
+
+            try (Connection conn = getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+                // 设置分页参数
+                pstmt.setInt(1, bookId);
+                pstmt.setInt(2, offset);
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        Book book = new Book(
+                                rs.getInt("book_id"),
+                                rs.getString("book_name"),
+                                rs.getString("author"),
+                                rs.getString("location"),
+                                rs.getInt("is_borrowed"),
+                                rs.getTimestamp("storage_time"),
+                                rs.getTimestamp("borrow_time"),
+                                rs.getTimestamp("return_time")
+                        );
+                        books.add(book);
+                    }
+                }
+            } catch (SQLException e) {
+                handleSQLException(e);
+            }
+            return books;
+        }
+
+
+        /**
          * @param keyword: (String)搜索内容
          * @param pageNumber: (int)页数
          * @return List<Book>
@@ -197,6 +247,49 @@ public class DataBase {
         }
 
 
+        public List<Book> searchBooksByStorageDate(Timestamp startDate, Timestamp endDate, int pageNumber) {
+            List<Book> books = new ArrayList<>();
+            if(pageNumber < 1) {
+                throw new IllegalArgumentException("页码不能小于1");
+            }
+
+            int offset = (pageNumber - 1) * 10;
+
+            String sql = "SELECT book_id, book_name, author, location, is_borrowed, storage_time, borrow_time, return_time "
+                    + "FROM book "
+                    + "WHERE storage_time BETWEEN ? AND ? "
+                    + "LIMIT 10 OFFSET ?";
+
+            try (Connection conn = getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+                // 设置分页参数
+                pstmt.setTimestamp(1, startDate);
+                pstmt.setTimestamp(2, endDate);
+                pstmt.setInt(3, offset);
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        Book book = new Book(
+                                rs.getInt("book_id"),
+                                rs.getString("book_name"),
+                                rs.getString("author"),
+                                rs.getString("location"),
+                                rs.getInt("is_borrowed"),
+                                rs.getTimestamp("storage_time"),
+                                rs.getTimestamp("borrow_time"),
+                                rs.getTimestamp("return_time")
+                        );
+                        books.add(book);
+                    }
+                }
+            } catch (SQLException e) {
+                handleSQLException(e);
+            }
+            return books;
+        }
+
+
         /**
          * @param book: (Class)一个图书对象
           * @return boolean
@@ -261,7 +354,7 @@ public class DataBase {
          * @date 2025/3/23 21:44
          */
         public boolean updateBook(int bookId, Book book) {
-            String sql = "UPDATE book SET book_name = ?, author = ?, location = ?, is_borrowed = ?, storage_time = ? WHERE book_id = ?";
+            String sql = "UPDATE book SET book_name = ?, author = ?, location = ?, is_borrowed = ?, storage_time = ?, borrow_time=?, return_time=? WHERE book_id = ?";
 
             try (Connection conn = getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -272,6 +365,8 @@ public class DataBase {
                 pstmt.setInt(4, book.getIsBorrowed());
                 pstmt.setTimestamp(5, book.getStorageTime());
                 pstmt.setInt(6, bookId);
+                pstmt.setTimestamp(7, book.getBorrowedTime());
+                pstmt.setTimestamp(8, book.getReturnTime());
 
                 int affectedRows = pstmt.executeUpdate();
                 return affectedRows > 0;  // 返回是否成功修改
