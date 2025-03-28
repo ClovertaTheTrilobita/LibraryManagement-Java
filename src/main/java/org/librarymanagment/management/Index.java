@@ -237,50 +237,182 @@ public class Index {
     }
 
     private static void showBookQueryMenu() {
-        JFrame frame = createBaseFrame("图书查询", 350, 300);
-        JPanel panel = new JPanel(new GridLayout(4, 1));
+        JFrame frame = createBaseFrame("图书查询", 400, 200);
+        JPanel mainPanel = new JPanel(new BorderLayout());
 
-        // 查询类型选择
-        JComboBox<String> searchType = new JComboBox<>(new String[]{
-                "按ID查询",
-                "按书名查询",
-                "按入库日期查询(yyyy-MM-dd)"
-        });
+        // 查询类型选择面板
+        JPanel typePanel = new JPanel(new FlowLayout());
+        JComboBox<String> searchTypeCombo = new JComboBox<>(
+                new String[]{"按ID查询", "按书名查询", "按作者查询", "按位置查询", "按入库日期查询"}
+        );
+        typePanel.add(new JLabel("查询类型："));
+        typePanel.add(searchTypeCombo);
 
-        // 关键词输入
-        JTextField keywordField = new JTextField();
+        // 页码输入面板
+        JPanel pagePanel = new JPanel(new FlowLayout());
+        JTextField pageField = new JTextField("1", 5);
+        pagePanel.add(new JLabel("页码："));
+        pagePanel.add(pageField);
 
-        panel.add(new JLabel("选择查询方式:"));
-        panel.add(searchType);
-        panel.add(new JLabel("输入查询内容:"));
-        panel.add(keywordField);
+        // 结果展示区
+        JTextArea resultArea = new JTextArea(8, 30);
+        resultArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(resultArea);
 
+        // 操作按钮
         JButton searchBtn = new JButton("查询");
-        searchBtn.addActionListener(e -> {
-            String type = switch(searchType.getSelectedIndex()) {
-                case 0 -> "id";
-                case 1 -> "name";
-                case 2 -> "time";
-                default -> "name";
-            };
+        JButton prevBtn = new JButton("上一页");
+        JButton nextBtn = new JButton("下一页");
 
-            List<String> results = BookManagement.searchBooks(type, keywordField.getText());
-            if (!results.isEmpty()) {
-                JOptionPane.showMessageDialog(frame,
-                        String.join("\n\n", results),
-                        "查询结果",
-                        JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(frame,
-                        "未找到匹配记录",
-                        "提示",
-                        JOptionPane.WARNING_MESSAGE);
+        // 查询按钮事件
+        searchBtn.addActionListener(e -> {
+            int searchType = searchTypeCombo.getSelectedIndex();
+            int pageNumber;
+
+            try {
+                pageNumber = Integer.parseInt(pageField.getText());
+                if (pageNumber < 1) throw new NumberFormatException();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(frame, "页码必须为大于0的整数");
+                return;
+            }
+
+            switch (searchType) {
+                case 4: // 入库日期查询
+                    showDateInputDialog(frame, pageNumber, resultArea);
+                    break;
+                default:
+                    handleCommonSearch(searchTypeCombo, pageNumber, resultArea);
             }
         });
 
-        frame.add(panel, BorderLayout.CENTER);
-        frame.add(searchBtn, BorderLayout.SOUTH);
+        // 分页按钮事件
+        prevBtn.addActionListener(e -> {
+            int current = Integer.parseInt(pageField.getText());
+            if (current > 1) pageField.setText(String.valueOf(current - 1));
+            searchBtn.doClick();
+        });
+
+        nextBtn.addActionListener(e -> {
+            int current = Integer.parseInt(pageField.getText());
+            pageField.setText(String.valueOf(current + 1));
+            searchBtn.doClick();
+        });
+
+        // 按钮面板
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(prevBtn);
+        buttonPanel.add(searchBtn);
+        buttonPanel.add(nextBtn);
+
+        // 布局组装
+        mainPanel.add(typePanel, BorderLayout.NORTH);
+        mainPanel.add(pagePanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        frame.add(mainPanel, BorderLayout.NORTH);
+        frame.add(scrollPane, BorderLayout.CENTER);
         centerFrame(frame);
+    }
+
+    // 显示日期输入对话框
+    private static void showDateInputDialog(Component parent, int pageNumber, JTextArea resultArea) {
+        JDialog dialog = new JDialog((Frame) null, "日期范围查询", true);
+        dialog.setLayout(new GridLayout(3, 2, 10, 10));
+        dialog.setSize(300, 150);
+
+        JTextField startField = new JTextField();
+        JTextField endField = new JTextField();
+
+        dialog.add(new JLabel("开始日期 (yyyy-MM-dd HH:mm:ss):"));
+        dialog.add(startField);
+        dialog.add(new JLabel("结束日期 (yyyy-MM-dd HH:mm:ss):"));
+        dialog.add(endField);
+
+        JButton confirmBtn = new JButton("确定");
+        JButton cancelBtn = new JButton("取消");
+
+        confirmBtn.addActionListener(e -> {
+            try {
+                Timestamp start = Timestamp.valueOf(startField.getText().trim());
+                Timestamp end = Timestamp.valueOf(endField.getText().trim());
+
+                List<Book> books = new DataBase().new BookDB()
+                        .searchBooksByStorageDate(start, end, pageNumber);
+
+                resultArea.setText(formatBookResults(books));
+                dialog.dispose();
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(dialog, "日期格式错误，请使用：yyyy-MM-dd HH:mm:ss");
+            }
+        });
+
+        cancelBtn.addActionListener(e -> dialog.dispose());
+
+        JPanel btnPanel = new JPanel();
+        btnPanel.add(confirmBtn);
+        btnPanel.add(cancelBtn);
+
+        dialog.add(btnPanel);
+        dialog.setLocationRelativeTo(parent);
+        dialog.setVisible(true);
+    }
+
+    // 处理常规查询
+    private static void handleCommonSearch(JComboBox<String> combo, int pageNumber, JTextArea resultArea) {
+        String searchType = switch (combo.getSelectedIndex()) {
+            case 0 -> "id";
+            case 1 -> "name";
+            case 2 -> "author";
+            case 3 -> "location";
+            default -> "name";
+        };
+
+        String keyword = JOptionPane.showInputDialog("请输入搜索关键字：");
+        if (keyword == null || keyword.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(null, "搜索内容不能为空");
+            return;
+        }
+
+        List<Book> books;
+        DataBase.BookDB bookDB = new DataBase().new BookDB();
+        switch (searchType) {
+            case "id":
+                books = bookDB.searchBooksById(Integer.parseInt(keyword), pageNumber);
+                break;
+            case "name":
+                books = bookDB.searchBooksByName(keyword, pageNumber);
+                break;
+            case "author":
+                books = bookDB.searchBooksByAuthor(keyword, pageNumber);
+                break;
+            case "location":
+                books = bookDB.searchBooksByLocation(keyword, pageNumber);
+                break;
+            default:
+                books = new ArrayList<>();
+        }
+
+        resultArea.setText(formatBookResults(books));
+    }
+
+    // 格式化查询结果
+    private static String formatBookResults(List<Book> books) {
+        if (books.isEmpty()) return "未找到匹配记录";
+
+        StringBuilder sb = new StringBuilder();
+        for (Book book : books) {
+            sb.append(String.format(
+                    "ID: %d\n书名: %s\n作者: %s\n位置: %s\n状态: %s\n入库时间: %s\n\n",
+                    book.getId(),
+                    book.getName(),
+                    book.getAuthor(),
+                    book.getLocation(),
+                    book.getIsBorrowed() == 1 ? "已借出" : "在馆",
+                    book.getStorageTime()
+            ));
+        }
+        return sb.toString().trim();
     }
 
     private static void showBorrowManageMenu() {
