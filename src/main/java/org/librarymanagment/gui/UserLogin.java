@@ -54,6 +54,8 @@ public class UserLogin {
         Box btnBox = Box.createHorizontalBox();
         JButton loginButton = new JButton("登录");
         JButton registerButton = new JButton("没有账号？去注册");
+        // 设置按钮无边框
+
 
         //登录按钮绑定事件：验证登录
         loginButton.addActionListener(new ActionListener() {

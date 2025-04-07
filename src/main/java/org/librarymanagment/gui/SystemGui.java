@@ -9,8 +9,7 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
-import java.io.IOException;
+
 
 public class SystemGui {
     JFrame jf = new JFrame("海大图书馆：xxx，欢迎您");
@@ -62,7 +61,7 @@ public class SystemGui {
         //设置左侧内容
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("系统管理");
         DefaultMutableTreeNode userSpace = new DefaultMutableTreeNode("用户空间");
-        DefaultMutableTreeNode bookManage = new DefaultMutableTreeNode("图书管理");
+        DefaultMutableTreeNode bookManage = new DefaultMutableTreeNode("图书查询");
         DefaultMutableTreeNode borrowManage = new DefaultMutableTreeNode("借阅管理");
         DefaultMutableTreeNode statisticsManage = new DefaultMutableTreeNode("统计分析");
 
@@ -87,9 +86,29 @@ public class SystemGui {
              //当条目选中变化后，这个方法会执行
              @Override
              public void valueChanged(TreeSelectionEvent e) {
+                 //得到当前选中的节点对象
+             Object lastPathComponent = e.getNewLeadSelectionPath().getLastPathComponent();
+
+             if(userSpace.equals(lastPathComponent)) {
+                 sp.setRightComponent(new JLabel("这里是用户中心"));
+                 sp.setDividerLocation(150);
+             }
+             if(bookManage.equals(lastPathComponent)) {
+                 sp.setRightComponent(new JLabel("这里进行图书管理..."));
+                 sp.setDividerLocation(150);
+             }
+             if(borrowManage.equals(lastPathComponent)) {
+                 sp.setRightComponent(new JLabel("这里进行借阅管理..."));
+                 sp.setDividerLocation(150);
+             }
+             if(statisticsManage.equals(lastPathComponent)) {
+                 sp.setRightComponent(new JLabel("这里进行统计分析..."));
+                 sp.setDividerLocation(150);
 
              }
-         });
+
+             }
+             });
 
 
 
