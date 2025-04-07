@@ -20,7 +20,6 @@ public class DataBase {
 
     static {
         try {
-            // 自动加载驱动（JDBC 4.0+可以省略，但显式声明更可靠）
             Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException e) {
             throw new RuntimeException("MySQL JDBC驱动未找到", e);
@@ -623,47 +622,104 @@ public class DataBase {
 
     }
 
+    public class BorrowedBookManagement {
+        public boolean borrowBook(int bookId, int userId) {
+            Connection conn = null;
+            try {
+                conn = getConnection();
+                conn.setAutoCommit(false); // 开始事务
 
+                // 更新书籍状态为已借出，仅当当前未借出时
+                String updateSql = "UPDATE book SET is_borrowed = 1 WHERE book_id = ? AND is_borrowed = 0";
+                try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                    updateStmt.setInt(1, bookId);
+                    int updated = updateStmt.executeUpdate();
+                    if (updated == 0) {
+                        conn.rollback();
+                        return false; // 书籍不存在或已被借出
+                    }
+                }
 
-//    public class BorrowHistoryDB {
-//        public List<Book> fetchBorrowedBooks(int pageNumber) {
-//            List<Book> books = new ArrayList<>();
-//            if(pageNumber < 1) {
-//                throw new IllegalArgumentException("页码不能小于1");
-//            }
+                // 插入借阅记录
+                String insertSql = "INSERT INTO borrow_history (user_id, book_id, borrowed_time) VALUES (?, ?, ?)";
+                try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                    insertStmt.setInt(1, userId);
+                    insertStmt.setInt(2, bookId);
+                    insertStmt.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
+                    insertStmt.executeUpdate();
+                }
+
+                conn.commit(); // 提交事务
+                return true;
+            } catch (SQLException e) {
+                rollback(conn);
+                handleSQLException(e);
+                return false;
+            } finally {
+                close(conn);
+            }
+        }
+
+        public boolean returnBook(int bookId) {
+            Connection conn = null;
+            try {
+                conn = getConnection();
+                conn.setAutoCommit(false);
+
+                // 更新书籍状态为未借出，仅当当前已借出时
+                String updateBookSql = "UPDATE book SET is_borrowed = 0 WHERE book_id = ? AND is_borrowed = 1";
+                try (PreparedStatement bookStmt = conn.prepareStatement(updateBookSql)) {
+                    bookStmt.setInt(1, bookId);
+                    int updated = bookStmt.executeUpdate();
+                    if (updated == 0) {
+                        conn.rollback();
+                        return false; // 书籍不存在或未被借出
+                    }
+                }
+
+                // 更新借阅记录的归还时间
+                String updateHistorySql = "UPDATE borrow_history SET return_time = ? WHERE book_id = ? AND return_time IS NULL";
+                try (PreparedStatement historyStmt = conn.prepareStatement(updateHistorySql)) {
+                    historyStmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+                    historyStmt.setInt(2, bookId);
+                    historyStmt.executeUpdate();
+                }
+
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                rollback(conn);
+                handleSQLException(e);
+                return false;
+            } finally {
+                close(conn);
+            }
+        }
+
+        private void rollback(Connection conn) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        private void close(Connection conn) {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+//        public List<Book> fetchBorrowHistory(int pageNumber) {
 //
-//            int offset = (pageNumber - 1) * 10;
-//            String sql = "SELECT borrow_id, book_id, borrow_time, return_time FROM borrow_list LIMIT 10 OFFSET ?";
-//            String sql1 = "SELECT book_id, book_name, author, location, is_borrowed, storage_time, borrow_time, return_time FROM book WHERE book_id = " +
-//                    "(SELECT book_id FROM borrow_list) LIMIT 10 OFFSET ?";
-//
-//            try (Connection conn = getConnection();
-//                 PreparedStatement pstmt = conn.prepareStatement(sql);
-//                 PreparedStatement pstmt1 = conn.prepareStatement(sql1)) {
-//
-//                pstmt.setInt(1, offset);
-//                pstmt1.setInt(1, offset);
-//
-//                try (ResultSet rs = pstmt.executeQuery();
-//                ResultSet rs1 = pstmt1.executeQuery();) {
-//                    while (rs.next()) {
-//                        Book book = new Book(
-//                                rs.getInt("book_id"),
-//                                rs.getString("book_name"),
-//                                rs.getString("author"),
-//                                rs.getString("location"),
-//                                rs.getInt("is_borrowed"),
-//                                rs.getTimestamp("storage_time")
-//                        );
-//                        books.add(book);
-//                    }
-//                }
-//            } catch (SQLException e) {
-//                handleSQLException(e);
-//            }
-//            return books;
 //        }
-//    }
+    }
 
     /**
      * @param formName: (String) 数据库中的表名
