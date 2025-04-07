@@ -15,7 +15,7 @@ public class DataBase {
     // 数据库连接配置
     private static final String URL = "jdbc:mysql://localhost:3306/library_management?serverTimezone=UTC";
     private static final String USER = "root";
-    private static final String PASSWORD = "123456";
+    private static final String PASSWORD = "184357";
     private static final Set<String> ALLOWED_TABLES = Set.of("book", "user_list", "borrow_list");
 
     static {
@@ -600,6 +600,27 @@ public class DataBase {
                 return false;
             }
         }
+
+
+
+        //用户登录验证
+        // UserLogin 方法中创建实例调用 getConnection()
+        public static boolean UserLogin(String username, String password) {
+            String sql = "SELECT * FROM user_list WHERE user_name = ? AND password = ?";
+            DataBase db = new DataBase(); // 创建实例
+            try (Connection conn = db.getConnection(); // 通过实例调用
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, username);
+                pstmt.setString(2, password);
+                ResultSet rs = pstmt.executeQuery();
+                return rs.next();
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+
+
     }
 
 
@@ -668,6 +689,7 @@ public class DataBase {
         }
         return 0;
     }
+
 
 
 

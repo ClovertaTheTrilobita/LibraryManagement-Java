@@ -1,16 +1,14 @@
 package org.librarymanagment.gui;
 
 import org.librarymanagment.componen.BackgroundPanel;
-
+import org.librarymanagment.userMethod.Login;
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.IOException;
 
-public class UserRegistrationAndLogin {
+public class UserLogin {
 
     JFrame jf = new JFrame("海大图书馆");
 
@@ -22,11 +20,13 @@ public class UserRegistrationAndLogin {
         // 设置窗口相关属性
 
         jf.setResizable(false);
+        //由此插入图标
         jf.setIconImage(new ImageIcon(getClass().getResource("/images/library.png")).getImage());
         jf.setSize(WIDE, HIGH);
         jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         jf.setLocationRelativeTo(null);
-        // 设置窗口内容
+
+        // 设置窗口内容，由此插入背景图片
         BackgroundPanel bgPanel = new BackgroundPanel(ImageIO.read(new File(getClass().getResource("/images/library.JPG").getPath())));
 
         // 组装登录相关的元素
@@ -53,19 +53,46 @@ public class UserRegistrationAndLogin {
         // 组装按钮
         Box btnBox = Box.createHorizontalBox();
         JButton loginButton = new JButton("登录");
-        JButton registerButton = new JButton("注册");
+        JButton registerButton = new JButton("没有账号？去注册");
+
+        //登录按钮绑定事件：验证登录
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-              //获取用户输入的数据
+                // 获取用户输入的数据
                 String userName = uField.getText();
                 String password = new String(pField.getPassword());
 
-              //访问登录接口
-
+                // 调用 Login 类的 userLogin 方法进行验证
+                if (Login.userLogin(userName, password)) {
+                    JOptionPane.showMessageDialog(jf, "登录成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
+                    // 进行后续操作，打开主界面
+                    try {
+                        new SystemGui().init();
+                        jf.dispose();
+                    } catch (Exception ex) {
+                        throw new RuntimeException(ex);
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(jf, "用户名或密码错误！", "错误", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 
+        //注册按钮绑定事件跳转到注册页面
+        registerButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            JOptionPane.showMessageDialog(jf , "跳转到注册页面");
+                try {
+                    new UserRegister().init();
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+                //当前界面消失
+                jf.dispose();
+            }
+        });
         btnBox.add(loginButton);
         btnBox.add(Box.createHorizontalStrut(100));
         btnBox.add(registerButton);
@@ -82,10 +109,11 @@ public class UserRegistrationAndLogin {
         jf.setVisible(true);
     }
 
+
     // 客户端程序入口
     public static void main(String[] args) {
         try {
-            UserRegistrationAndLogin app = new UserRegistrationAndLogin();
+            UserLogin app = new UserLogin();
             app.init();
         } catch (Exception e) {
             e.printStackTrace();
@@ -93,4 +121,3 @@ public class UserRegistrationAndLogin {
         }
     }
 }
-
