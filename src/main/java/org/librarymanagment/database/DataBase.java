@@ -602,9 +602,9 @@ public class DataBase {
 
 
 
-        //用户登录验证
+        //用户登录验证,返回用户名,密码和是否为管理员
         // UserLogin 方法中创建实例调用 getConnection()
-        public static boolean UserLogin(String username, String password) {
+        public static boolean UserLogin(String username, String password, boolean[] result) {
             String sql = "SELECT * FROM user_list WHERE user_name = ? AND password = ?";
             DataBase db = new DataBase(); // 创建实例
             try (Connection conn = db.getConnection(); // 通过实例调用
@@ -612,11 +612,67 @@ public class DataBase {
                 pstmt.setString(1, username);
                 pstmt.setString(2, password);
                 ResultSet rs = pstmt.executeQuery();
-                return rs.next();
+                if (rs.next()) {
+                    result[0] = true;
+                    result[1] = rs.getBoolean("is_admin");
+                    return true;
+                }
+                return false;
             } catch (SQLException e) {
                 e.printStackTrace();
                 return false;
             }
+        }
+
+        // 检查用户名是否已存在
+        public boolean isUserNameExists(String userName) {
+            String sql = "SELECT COUNT(*) FROM user_list WHERE user_name = ?";
+            try (Connection conn = getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, userName);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getInt(1) > 0;
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return false;
+        }
+
+        // 检查邮箱是否已存在
+        public boolean isEmailExists(String email) {
+            String sql = "SELECT COUNT(*) FROM user_list WHERE email = ?";
+            try (Connection conn = getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, email);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getInt(1) > 0;
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return false;
+        }
+
+        // 检查手机号是否已存在
+        public boolean isPhoneExists(String phone) {
+            String sql = "SELECT COUNT(*) FROM user_list WHERE phone = ?";
+            try (Connection conn = getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, phone);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getInt(1) > 0;
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return false;
         }
 
 

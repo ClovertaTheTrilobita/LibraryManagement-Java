@@ -111,8 +111,8 @@ public class UserRegister {
                 }
 
                 // 调用 UserManagement.addAdmin
-                boolean success = Register.UserRegister(userName, password, email, phone, gender);
-                if (success) {
+                String result = Register.UserRegister(userName, password, email, phone, gender);
+                if ("success".equals(result)) {
                     JOptionPane.showMessageDialog(jf, "注册成功,即将返回登陆页面");
 
                     try {
@@ -121,6 +121,14 @@ public class UserRegister {
                         throw new RuntimeException(ex);
                     }
                     jf.dispose();
+                } else if ("username_exists".equals(result)) {
+                    JOptionPane.showMessageDialog(jf, "该用户名已存在，请选择其他用户名");
+                } else if ("phone_exists".equals(result)) {
+                    JOptionPane.showMessageDialog(jf, "该手机号已被注册，请使用其他手机号");
+                } else if ("email_exists".equals(result)) {
+                    JOptionPane.showMessageDialog(jf, "该邮箱已被注册，请使用其他邮箱");
+                } else {
+                    JOptionPane.showMessageDialog(jf, "注册失败，请稍后重试");
                 }
             }
         });

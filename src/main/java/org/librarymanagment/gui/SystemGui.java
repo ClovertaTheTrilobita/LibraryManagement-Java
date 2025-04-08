@@ -1,6 +1,9 @@
 package org.librarymanagment.gui;
 
-import javax.imageio.ImageIO;
+import org.librarymanagment.componen.UserBorrowManageComponent;
+import org.librarymanagment.componen.UserBookSerchComponent;
+import org.librarymanagment.componen.UserSpaceManageComponent;
+
 import javax.swing.*;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
@@ -12,9 +15,14 @@ import java.awt.event.ActionListener;
 
 
 public class SystemGui {
-    JFrame jf = new JFrame("海大图书馆：xxx，欢迎您");
-    final int WIDTH = 1200;
+    JFrame jf = new JFrame();
+    final int WIDTH = 900;
     final int HEIGHT = 800;
+
+    // 构造函数，接收用户名并设置窗口标题
+    public SystemGui(String userName) {
+        jf.setTitle("海大图书馆：" + userName + "，欢迎您");
+    }
 
     //组装视图
     public void init() throws Exception {
@@ -61,7 +69,7 @@ public class SystemGui {
         //设置左侧内容
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("系统管理");
         DefaultMutableTreeNode userSpace = new DefaultMutableTreeNode("用户空间");
-        DefaultMutableTreeNode bookManage = new DefaultMutableTreeNode("图书查询");
+        DefaultMutableTreeNode bookManage = new DefaultMutableTreeNode("搜索图书");
         DefaultMutableTreeNode borrowManage = new DefaultMutableTreeNode("借阅管理");
         DefaultMutableTreeNode statisticsManage = new DefaultMutableTreeNode("统计分析");
 
@@ -70,7 +78,7 @@ public class SystemGui {
         root.add(borrowManage);
         root.add(statisticsManage);
 
-       Color color = new Color(203, 220, 217);
+        Color color = new Color(203, 220, 217);
         JTree tree = new JTree(root);
         MyRenderer myRenderer = new MyRenderer();
         myRenderer.setBackgroundNonSelectionColor(color);
@@ -80,42 +88,42 @@ public class SystemGui {
         tree.setBackground(color);
 
         //设置当前tree默认选中图书管理
-         tree.setSelectionRow(2);
-         tree.addTreeSelectionListener(new TreeSelectionListener() {
+        tree.setSelectionRow(2);
+        tree.addTreeSelectionListener(new TreeSelectionListener() {
 
-             //当条目选中变化后，这个方法会执行
-             @Override
-             public void valueChanged(TreeSelectionEvent e) {
-                 //得到当前选中的节点对象
-             Object lastPathComponent = e.getNewLeadSelectionPath().getLastPathComponent();
+            //当条目选中变化后，这个方法会执行
+            @Override
+            public void valueChanged(TreeSelectionEvent e) {
+                //得到当前选中的节点对象
+                Object lastPathComponent = e.getNewLeadSelectionPath().getLastPathComponent();
 
-             if(userSpace.equals(lastPathComponent)) {
-                 sp.setRightComponent(new JLabel("这里是用户中心"));
-                 sp.setDividerLocation(150);
-             }
-             if(bookManage.equals(lastPathComponent)) {
-                 sp.setRightComponent(new JLabel("这里进行图书管理..."));
-                 sp.setDividerLocation(150);
-             }
-             if(borrowManage.equals(lastPathComponent)) {
-                 sp.setRightComponent(new JLabel("这里进行借阅管理..."));
-                 sp.setDividerLocation(150);
-             }
-             if(statisticsManage.equals(lastPathComponent)) {
-                 sp.setRightComponent(new JLabel("这里进行统计分析..."));
-                 sp.setDividerLocation(150);
+                if(userSpace.equals(lastPathComponent)) {
+                    sp.setRightComponent(new UserSpaceManageComponent());
+                    sp.setDividerLocation(150);
+                }
+                if(bookManage.equals(lastPathComponent)) {
+                    sp.setRightComponent(new UserBookSerchComponent());
+                    sp.setDividerLocation(150);
+                }
+                if(borrowManage.equals(lastPathComponent)) {
+                    sp.setRightComponent(new UserBorrowManageComponent());
+                    sp.setDividerLocation(150);
+                }
+                if(statisticsManage.equals(lastPathComponent)) {
+                    sp.setRightComponent(new JLabel("统计分析您的喜好..."));
+                    sp.setDividerLocation(150);
 
-             }
+                }
 
-             }
-             });
-
-
+            }
+        });
 
 
 
 
-         sp.setRightComponent(new JLabel("这里进行图书管理..."));
+
+
+        sp.setRightComponent(new UserBookSerchComponent());
 
         sp.setLeftComponent(tree);
         jf.add(sp);
@@ -123,11 +131,14 @@ public class SystemGui {
 
         jf.setLocationRelativeTo(null);
         jf.setVisible(true);
+
+        //获取登录用户的用户名
+
     }
 
     public static void main(String[] args) {
         try {
-            new SystemGui().init();
+            new SystemGui("默认用户名").init(); // 这里可以传入默认用户名，实际使用中会从登录页面获取
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -141,11 +152,11 @@ public class SystemGui {
         private ImageIcon statisticsManageIcon = null;
 
         public MyRenderer () {
-                rootIcon = new ImageIcon((getClass().getResource("/images/root.png").getPath()));
-                userSpaceIcon = new ImageIcon((getClass().getResource("/images/userSpace.png").getPath()));
-                bookManageIcon = new ImageIcon((getClass().getResource("/images/bookManage.png").getPath()));
-                borrowManageIcon = new ImageIcon((getClass().getResource("/images/borrowManage.png").getPath()));
-                statisticsManageIcon = new ImageIcon((getClass().getResource("/images/statisticsManage.png").getPath()));
+            rootIcon = new ImageIcon((getClass().getResource("/images/root.png").getPath()));
+            userSpaceIcon = new ImageIcon((getClass().getResource("/images/userSpace.png").getPath()));
+            bookManageIcon = new ImageIcon((getClass().getResource("/images/bookManage.png").getPath()));
+            borrowManageIcon = new ImageIcon((getClass().getResource("/images/borrowManage.png").getPath()));
+            statisticsManageIcon = new ImageIcon((getClass().getResource("/images/statisticsManage.png").getPath()));
         }
         //当绘制树的每个节点时，都会调用这个方法
         @Override
@@ -171,7 +182,7 @@ public class SystemGui {
                     break;
             }
 
-          this.setIcon(image);
+            this.setIcon(image);
             return this;
 
         }

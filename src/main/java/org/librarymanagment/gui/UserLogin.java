@@ -1,5 +1,7 @@
 package org.librarymanagment.gui;
 
+import org.librarymanagment.management.Index;
+
 import org.librarymanagment.componen.BackgroundPanel;
 import org.librarymanagment.userMethod.Login;
 import javax.imageio.ImageIO;
@@ -57,7 +59,7 @@ public class UserLogin {
         // 设置按钮无边框
 
 
-        //登录按钮绑定事件：验证登录
+        // 登录按钮绑定事件：验证登录,根据是否为管理员账号选择跳转
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -66,11 +68,16 @@ public class UserLogin {
                 String password = new String(pField.getPassword());
 
                 // 调用 Login 类的 userLogin 方法进行验证
-                if (Login.userLogin(userName, password)) {
+                boolean[] loginResult = Login.userLogin(userName, password);
+                if (loginResult[0]) {
                     JOptionPane.showMessageDialog(jf, "登录成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
-                    // 进行后续操作，打开主界面
+                    // 进行后续操作，根据是否为管理员打开不同界面
                     try {
-                        new SystemGui().init();
+                        if (loginResult[1]) {
+                            Index.showAdminMenu(userName); // 修改这里
+                        } else {
+                            new SystemGui(userName).init();
+                        }
                         jf.dispose();
                     } catch (Exception ex) {
                         throw new RuntimeException(ex);
@@ -80,6 +87,7 @@ public class UserLogin {
                 }
             }
         });
+
 
         //注册按钮绑定事件跳转到注册页面
         registerButton.addActionListener(new ActionListener() {
