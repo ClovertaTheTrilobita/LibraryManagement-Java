@@ -772,9 +772,39 @@ public class DataBase {
             }
         }
 
-//        public List<Book> fetchBorrowHistory(int pageNumber) {
-//
-//        }
+        public List<BorrowInfo> fetchBorrowHistory(int pageNumber) {
+            List<BorrowInfo> books = new ArrayList<>();
+            // 参数校验
+            if(pageNumber < 1) {
+                throw new IllegalArgumentException("页码不能小于1");
+            }
+
+            // 计算偏移量（从0开始）
+            int offset = (pageNumber - 1) * 10;
+            String sql = "SELECT * "
+                    + "FROM borrow_history LIMIT 10 OFFSET ?";
+
+            try (Connection conn = getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+                // 设置分页参数
+                pstmt.setInt(1, offset);
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        BorrowInfo book = new BorrowInfo();
+                        book.setBookId(rs.getInt("book_id"));
+                        book.setUserId(rs.getInt("user_id"));
+                        book.setBorrowTime(rs.getTimestamp("borrow_time"));
+                        book.setReturnTime(rs.getTimestamp("return_time"));
+                        books.add(book);
+                    }
+                }
+            } catch (SQLException e) {
+                handleSQLException(e);
+            }
+            return books;
+        }
     }
 
     /**
