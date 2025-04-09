@@ -1,113 +1,97 @@
 package org.librarymanagment.userMethod;
 
+import org.librarymanagment.database.DataBase;
+import org.librarymanagment.database.User;
+import javax.swing.JOptionPane;
 import java.util.Vector;
 
-// 定义一个用户类，用于存储用户信息
-class User {
-    private String username;
-    private String password;
-    private String email;
-    private String phone;
-
-    public User(String username, String password, String email, String phone) {
-        this.username = username;
-        this.password = password;
-        this.email = email;
-        this.phone = phone;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-}
-
 public class UserSpace {
+    private DataBase db;
+    private DataBase.UserListDB userDB;
     private User user;
+    private String userName;
 
-    public UserSpace() {
-        // 初始化一个用户对象，模拟从数据库中获取用户信息
-        this.user = new User("用户名", "密码1", "email1@example.com", "12345678901");
+    public UserSpace(String userName) {
+        this.userName = userName;
+        db = new DataBase();
+        userDB = db.new UserListDB();
+        user = userDB.getUserByUserName(userName);
     }
 
-    // 获取用户信息的方法
+    // 获取用户信息
     public Vector<Vector> getUser() {
         Vector<Vector> userData = new Vector<>();
-        Vector<String> userRow = new Vector<>();
-        userRow.add(user.getUsername());
-        userRow.add(user.getPassword());
-        userRow.add(user.getEmail());
-        userRow.add(user.getPhone());
-        userData.add(userRow);
+        if (user != null) {
+            Vector<String> userRow = new Vector<>();
+            userRow.add(user.getUserName());
+            userRow.add(user.getPassword());
+            userRow.add(user.getEmail());
+            userRow.add(user.getPhone());
+            userData.add(userRow);
+        }
         return userData;
     }
 
-    // 修改后的 update 方法，接收修改的字段和新值，返回更新结果
+    // 修改用户信息
     public boolean update(String field, String newValue) {
         try {
             switch (field) {
                 case "用户名":
-                    user.setUsername(newValue);
+                    if (userDB.isUserNameExists(newValue)) {
+                        JOptionPane.showMessageDialog(null, "该用户名已被使用，请选择其他用户名。");
+                        return false;
+                    }
+                    user.setUserName(newValue);
+                    this.userName = newValue; // 更新当前保存的用户名
                     break;
                 case "密码":
                     user.setPassword(newValue);
                     break;
                 case "邮箱":
+                    if (userDB.isEmailExists(newValue)) {
+                        JOptionPane.showMessageDialog(null, "该邮箱已被使用，请选择其他邮箱。");
+                        return false;
+                    }
                     user.setEmail(newValue);
                     break;
                 case "手机号":
+                    if (userDB.isPhoneExists(newValue)) {
+                        JOptionPane.showMessageDialog(null, "该手机号码已被使用，请选择其他手机号码。");
+                        return false;
+                    }
                     user.setPhone(newValue);
                     break;
                 default:
                     return false;
             }
             System.out.println("更新 " + field + " 为: " + newValue);
-            return true;
+            return userDB.updateUser(user.getUserId(), user);
         } catch (Exception e) {
+            e.printStackTrace();
             return false;
         }
     }
 
-    // 新增的 update 方法，接收整个表格数据并更新数据库
+    // 更新整个表格数据
     public boolean update(Vector<Vector> tableData) {
-        try {
-            for (Vector<String> row : tableData) {
-                String field = row.get(0);
-                String newValue = row.get(1);
-                if (!update(field, newValue)) {
-                    return false;
-                }
+        boolean hasError = false;
+        for (Vector<String> row : tableData) {
+            String field = row.get(0);
+            String newValue = row.get(1);
+            if (!update(field, newValue)) {
+                hasError = true;
+                break;
             }
-            return true;
-        } catch (Exception e) {
-            return false;
         }
+        if (!hasError) {
+            // 更新用户对象
+            user = userDB.getUserByUserName(userName);
+        }
+        return!hasError;
+    }
+
+    // 获取当前用户名
+    public String getUserName() {
+        return userName;
     }
 }

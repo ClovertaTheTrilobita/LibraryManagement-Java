@@ -6,6 +6,7 @@ public class BorrowInfo {
     private int borrowId;
     private int userId;
     private int bookId;
+    private String bookName;
     private Timestamp borrowTime;
     private Timestamp returnTime;
 
@@ -31,6 +32,14 @@ public class BorrowInfo {
 
     public void setBookId(int bookId) {
         this.bookId = bookId;
+    }
+
+    public String getBookName() {
+        return bookName;
+    }
+
+    public void setBookName(String bookName) {
+        this.bookName = bookName;
     }
 
     public Timestamp getBorrowTime() {

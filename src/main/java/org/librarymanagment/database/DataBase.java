@@ -346,6 +346,8 @@ public class DataBase {
                 handleSQLException(e);
                 return false;
             }
+
+
         }
 
 
@@ -623,7 +625,30 @@ public class DataBase {
                 return false;
             }
         }
-
+        // 根据用户名获取用户信息
+        public User getUserByUserName(String userName) {
+            String sql = "SELECT * FROM user_list WHERE user_name = ?";
+            try (Connection conn = getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, userName);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        return new User(
+                                rs.getInt("user_id"),
+                                rs.getString("user_name"),
+                                rs.getString("password"),
+                                rs.getString("email"),
+                                rs.getString("phone"),
+                                rs.getInt("gender"),
+                                rs.getInt("is_admin")
+                        );
+                    }
+                }
+            } catch (SQLException e) {
+                handleSQLException(e);
+            }
+            return null;
+        }
         // 检查用户名是否已存在
         public boolean isUserNameExists(String userName) {
             String sql = "SELECT COUNT(*) FROM user_list WHERE user_name = ?";
@@ -697,7 +722,7 @@ public class DataBase {
                 }
 
                 // 插入借阅记录
-                String insertSql = "INSERT INTO borrow_history (user_id, book_id, borrowed_time) VALUES (?, ?, ?)";
+                String insertSql = "INSERT INTO borrow_history (user_id, book_id, borrow_time) VALUES (?, ?, ?)";
                 try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
                     insertStmt.setInt(1, userId);
                     insertStmt.setInt(2, bookId);
@@ -751,7 +776,42 @@ public class DataBase {
                 close(conn);
             }
         }
+        public List<BorrowInfo> getBorrowHistoryByUserIdWithBookName(int userId) {
+            Connection conn = null;
+            List<BorrowInfo> borrowInfos = new ArrayList<>();
+            try {
+                conn = getConnection();
+                conn.setAutoCommit(false);
 
+                String sql = "SELECT bh.borrow_id, bh.user_id, bh.book_id, b.book_name, bh.borrow_time, bh.return_time " +
+                        "FROM borrow_history bh " +
+                        "JOIN book b ON bh.book_id = b.book_id " +
+                        "WHERE bh.user_id = ?";
+                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setInt(1, userId);
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        while (rs.next()) {
+                            BorrowInfo borrowInfo = new BorrowInfo();
+                            borrowInfo.setBorrowId(rs.getInt("borrow_id"));
+                            borrowInfo.setUserId(rs.getInt("user_id"));
+                            borrowInfo.setBookId(rs.getInt("book_id"));
+                            borrowInfo.setBookName(rs.getString("book_name"));
+                            borrowInfo.setBorrowTime(rs.getTimestamp("borrow_time"));
+                            borrowInfo.setReturnTime(rs.getTimestamp("return_time"));
+                            borrowInfos.add(borrowInfo);
+                        }
+                    }
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                rollback(conn);
+               handleSQLException(e);
+            } finally {
+                close(conn);
+            }
+            return borrowInfos;
+        }
         private void rollback(Connection conn) {
             if (conn != null) {
                 try {
@@ -771,11 +831,12 @@ public class DataBase {
                 }
             }
         }
+    }
 
 //        public List<Book> fetchBorrowHistory(int pageNumber) {
 //
 //        }
-    }
+
 
     /**
      * @param formName: (String) 数据库中的表名
