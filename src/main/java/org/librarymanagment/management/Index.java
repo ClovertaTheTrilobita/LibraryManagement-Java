@@ -4,6 +4,7 @@ import org.librarymanagment.database.DataBase;
 
 import org.librarymanagment.database.*;
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +35,7 @@ public class Index {
         addMenuButton(mainPanel, "添加新图书", e -> showBookAddMenu());
         addMenuButton(mainPanel, "删除指定图书", e -> showBookDeleteMenu());
         addMenuButton(mainPanel, "查询图书信息", e -> showBookQueryMenu());
-//        addMenuButton(mainPanel, "查询借还书记录", e -> showBorrowManageMenu());
+        addMenuButton(mainPanel, "查询借还书记录", e -> showBorrowManageMenu());
         addMenuButton(mainPanel, "退出", e -> frame.dispose());
 
         frame.add(mainPanel);
@@ -415,62 +416,98 @@ public class Index {
         return sb.toString().trim();
     }
 
-//    private static void showBorrowManageMenu() {
-//        JFrame frame = createBaseFrame("借阅记录管理", 400, 300);
-//        JPanel panel = createFormPanel();
-//
-//        // 直接引用组件
-//        JComboBox<String> searchType = new JComboBox<>(new String[]{
-//                "按用户ID查询所有记录",
-//                "按用户ID查询未归还记录",
-//                "按图书ID/名称查询"
-//        });
-//        JTextField inputField = new JTextField();
-//
-//        addLabeledField(panel, "查询类型:", searchType);
-//        addLabeledField(panel, "输入内容:", inputField);
-//
-//        JPanel buttonPanel = createButtonPanel();
-//        addActionButton(buttonPanel, "查询", e -> {
-//            try {
-//                int type = searchType.getSelectedIndex();
-//                String keyword = inputField.getText().trim();
-//
-//                if(keyword.isEmpty()) {
-//                    JOptionPane.showMessageDialog(frame, "请输入查询内容");
-//                    return;
-//                }
-//
-//                // 查询逻辑
-//                List<String> results = new ArrayList<>();
-//                switch(type) {
-//                    case 0:
-//                    case 1:
-//                        int userId = Integer.parseInt(keyword);
-//                        results = UserManagement.getBorrowRecords(userId, type == 1);
-//                        break;
-//                    case 2:
-//                        String status = UserManagement.getBookBorrowStatus(keyword);
-//                        results.add(status);
-//                        break;
-//                }
-//
-//                if(!results.isEmpty()) {
-//                    new ResultDialog(frame, "查询结果", results);
-//                } else {
-//                    JOptionPane.showMessageDialog(frame, "未找到相关记录");
-//                }
-//            } catch (NumberFormatException ex) {
-//                JOptionPane.showMessageDialog(frame, "用户ID必须是数字");
-//            }
-//        });
-//        addBackButton(buttonPanel, frame);
-//
-//        frame.add(panel, BorderLayout.CENTER);
-//        frame.add(buttonPanel, BorderLayout.SOUTH);
-//        centerFrame(frame);
-//    }
-//
+    private static void showBorrowManageMenu() {
+        JFrame frame = createBaseFrame("借阅记录管理", 800, 600);
+        JPanel mainPanel = new JPanel(new BorderLayout());
+
+        // 查询条件面板
+        JPanel queryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JTextField userIdField = new JTextField(10);
+        JCheckBox unreturnedCheck = new JCheckBox("仅显示未归还");
+        JButton queryBtn = new JButton("查询");
+
+        queryPanel.add(new JLabel("用户ID:"));
+        queryPanel.add(userIdField);
+        queryPanel.add(unreturnedCheck);
+        queryPanel.add(queryBtn);
+
+        // 表格数据
+        String[] columnNames = {"借阅ID", "用户ID", "书籍ID", "书名", "借阅时间", "归还时间"};
+        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 4 || columnIndex == 5) {
+                    return Timestamp.class;
+                }
+                return super.getColumnClass(columnIndex);
+            }
+        };
+
+        JTable table = new JTable(tableModel);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JScrollPane scrollPane = new JScrollPane(table);
+
+        // 操作按钮
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton returnBtn = new JButton("标记归还");
+        returnBtn.addActionListener(e -> {
+            int selectedRow = table.getSelectedRow();
+            if (selectedRow != -1) {
+                int borrowId = (Integer) tableModel.getValueAt(selectedRow, 0);
+                int bookId = (Integer) tableModel.getValueAt(selectedRow, 2);
+
+                DataBase db = new DataBase();
+                DataBase.BorrowedBookManagement borrowDB = db.new BorrowedBookManagement();
+                boolean success = borrowDB.returnBook(bookId);
+
+                if (success) {
+                    JOptionPane.showMessageDialog(frame, "标记归还成功");
+                    queryBtn.doClick(); // 刷新数据
+                } else {
+                    JOptionPane.showMessageDialog(frame, "标记归还失败");
+                }
+            }
+        });
+        btnPanel.add(returnBtn);
+
+        // 查询按钮事件
+        queryBtn.addActionListener(e -> {
+            try {
+                int userId = Integer.parseInt(userIdField.getText().trim());
+                boolean unreturnedOnly = unreturnedCheck.isSelected();
+
+                List<BorrowInfo> records = UserManagement.getBorrowRecords(userId, unreturnedOnly);
+                tableModel.setRowCount(0); // 清空表格
+
+                for (BorrowInfo info : records) {
+                    tableModel.addRow(new Object[]{
+                            info.getBorrowId(),
+                            info.getUserId(),
+                            info.getBookId(),
+                            info.getBookName(),
+                            info.getBorrowTime(),
+                            info.getReturnTime()
+                    });
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(frame, "用户ID必须是数字");
+            }
+        });
+
+        // 布局组装
+        mainPanel.add(queryPanel, BorderLayout.NORTH);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        mainPanel.add(btnPanel, BorderLayout.SOUTH);
+
+        frame.add(mainPanel);
+        centerFrame(frame);
+    }
+
 
 
     private static JFrame createBaseFrame(String title, int width, int height) {
